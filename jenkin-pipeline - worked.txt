@@ -1,9 +1,9 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCOUNT_ID="748752133788"
+        AWS_ACCOUNT_ID="625249976195"
         AWS_DEFAULT_REGION="us-east-1"
-        IMAGE_REPO_NAME="arunnewreg"
+        IMAGE_REPO_NAME="devops2"
         IMAGE_TAG="v1"
         REPOSITORY_URI = "625249976195.dkr.ecr.us-east-1.amazonaws.com/jenkins-cicd-app"
     }
@@ -24,7 +24,7 @@ pipeline {
         
         stage('Cloning Git') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/arunarumugamaws/devops.git']]])     
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/ramarajanjp/devops2.git']]])     
             }
         }
   
