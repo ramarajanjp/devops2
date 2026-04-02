@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCOUNT_ID="748752133788"
+        AWS_DEFAULT_REGION="us-east-1"
+        IMAGE_REPO_NAME="arunnewreg"
+        IMAGE_TAG="v1"
+        REPOSITORY_URI = "748752133788.dkr.ecr.us-east-1.amazonaws.com/arunnewreg"
+    }
+
+    stages {
+
+        stage('Logging into AWS ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh '''
+                    aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+                    docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+                    '''
+                }
+            }
+        }
+
+        stage('Cloning Git') {
+            steps {
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[url: 'https://github.com/arunarumugamaws/devops.git']]
+                ])
+            }
+        }
+
+        stage('Building image') {
+            steps {
+                sh 'docker build -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .'
+            }
+        }
+
+        stage('Pushing to ECR') {
+            steps {
+                sh "docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${REPOSITORY_URI}:${IMAGE_TAG}"
+                sh "docker push ${REPOSITORY_URI}:${IMAGE_TAG}"
+            }
+        }
+
+        // NEW STAGE ADDED
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh '''
+                    # Connect to EKS cluster
+                    aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name my-eks-cluster
+
+                    # Verify cluster access
+                    kubectl get nodes
+
+                    # Update running app with new image
+                    kubectl set image deployment/node-app node-app=$REPOSITORY_URI:$IMAGE_TAG
+
+                    # Wait for rollout
+                    kubectl rollout status deployment/node-app
+                    '''
+                }
+            }
+        }
+    }
+}
