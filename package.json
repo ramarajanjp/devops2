@@ -2,7 +2,7 @@
 	"name": "docker_web_app",
 	"version": "1.0.0",
 	"description": "Node.JS",
-	"author": "Arun Arumugam - super hero",
+	"author": "TestAuthor1",
 	"main": "server.js",
 	"scripts": {
 		"start": "node server.js"
