@@ -1,25 +1,13 @@
-FROM amazonlinux:2
+FROM node:20-alpine
 
-# Install Node.js 18
-RUN yum update -y && \
-    curl -fsSL https://rpm.nodesource.com/setup_18.x | bash - && \
-    yum install -y nodejs && \
-    yum clean all
+WORKDIR /app
 
-# Create app directory
-WORKDIR /usr/src/app
-
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
 RUN npm install
 
-# Copy application source
 COPY . .
 
-# Expose application port
-EXPOSE 8080
+EXPOSE 3000
 
-# Start application
 CMD ["node", "server.js"]
