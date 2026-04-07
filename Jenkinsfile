@@ -3,16 +3,16 @@ pipeline {
     environment {
         AWS_ACCOUNT_ID="471623014525"
         AWS_DEFAULT_REGION="us-east-1"
-        IMAGE_REPO_NAME="arunnewreg"
+        IMAGE_REPO_NAME="jenkins-cicd-app"
         IMAGE_TAG="v1"
-        REPOSITORY_URI = "748752133788.dkr.ecr.us-east-1.amazonaws.com/arunnewreg"
+        REPOSITORY_URI = "471623014525.dkr.ecr.us-east-1.amazonaws.com/jenkins-cicd-app"
     }
    stages {
         stage('Logging into AWS ECR') {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: '471623014525'
         ]]) {
             sh '''
             aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
@@ -24,7 +24,7 @@ pipeline {
         
         stage('Cloning Git') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/arunarumugamaws/devops.git']]])     
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/ramarajanjp/devops2.git']]])     
             }
         }
   
