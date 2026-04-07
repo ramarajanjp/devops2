@@ -1,18 +1,18 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCOUNT_ID="625249976195"
+        AWS_ACCOUNT_ID="471623014525"
         AWS_DEFAULT_REGION="us-east-1"
-        IMAGE_REPO_NAME="devops2"
+        IMAGE_REPO_NAME="jenkins-cicd-app"
         IMAGE_TAG="v1"
-        REPOSITORY_URI = "625249976195.dkr.ecr.us-east-1.amazonaws.com/jenkins-cicd-app"
+        REPOSITORY_URI = "471623014525.dkr.ecr.us-east-1.amazonaws.com/jenkins-cicd-app"
     }
    stages {
         stage('Logging into AWS ECR') {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: '625249976195'
+                    credentialsId: '471623014525'
         ]]) {
             sh '''
             aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
