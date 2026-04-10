@@ -94,7 +94,8 @@ pipeline {
                         ls -l
 
                         # Find k8s yaml file safely
-                        FILE=$(ls *k8s*.yaml 2>/dev/null | head -n 1)
+                        #FILE=$(ls *k8s*.yaml 2>/dev/null | head -n 1)
+			FILE=$(ls *k8s*.yaml 2>/dev/null | grep -v temp | head -n 1)
 
                         if [ -z "$FILE" ]; then
                             echo "ERROR: No Kubernetes YAML file found!"
