@@ -1,0 +1,127 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCOUNT_ID     = "471623014525"
+        AWS_DEFAULT_REGION = "us-east-1"
+        IMAGE_REPO_NAME    = "devops2"
+        IMAGE_TAG          = "${BUILD_NUMBER}"
+        REPOSITORY_URI     = "471623014525.dkr.ecr.us-east-1.amazonaws.com/jenkins-cicd-app"
+        CLUSTER_NAME       = "my-eks-cluster"
+    }
+
+    stages {
+
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-credentials'
+                ]]) {
+                    sh '''
+                        aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+                        docker login --username AWS --password-stdin \
+                        $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+                    '''
+                }
+            }
+        }
+
+        stage('Clone Git Repository') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/ramarajanjp/devops2.git'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+                '''
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                sh '''
+                    docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+                    docker push $REPOSITORY_URI:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Create EKS Cluster') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-credentials'
+                ]]) {
+                    sh '''
+                        if ! eksctl get cluster --name $CLUSTER_NAME --region $AWS_DEFAULT_REGION; then
+                            echo "Creating EKS Cluster..."
+                            eksctl create cluster \
+                                --name $CLUSTER_NAME \
+                                --region $AWS_DEFAULT_REGION \
+                                --nodegroup-name standard-workers \
+                                --node-type t3.medium \
+                                --nodes 2 \
+                                --nodes-min 2 \
+                                --nodes-max 3
+                        else
+                            echo "Cluster already exists"
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-credentials'
+                ]]) {
+                    sh '''
+                        aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $CLUSTER_NAME
+
+                        echo "Listing workspace files:"
+                        ls -l
+
+                        # Find k8s yaml file safely
+                        FILE=$(ls *k8s*.yaml 2>/dev/null | head -n 1)
+
+                        if [ -z "$FILE" ]; then
+                            echo "ERROR: No Kubernetes YAML file found!"
+                            exit 1
+                        fi
+
+                        echo "Using file: $FILE"
+
+                        # Create temp file
+                        cp $FILE k8sdeployment-temp.yaml
+
+                        # Replace image dynamically
+                        sed -i "s|IMAGE_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" k8sdeployment-temp.yaml
+
+                        # Apply deployment
+                        kubectl apply -f k8sdeployment-temp.yaml
+
+                        # Wait for rollout
+                        kubectl rollout status deployment/node-app
+
+                        # Verify
+                        kubectl get deployments
+                        kubectl get pods
+                        kubectl get svc
+                    '''
+                }
+            }
+        }
+    }
+}
